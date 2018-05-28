@@ -574,7 +574,7 @@ public:
         {
             if (!str.empty())
                 str += " ";
-            if (opcode <= OP_PUSHDATA4)
+            if (opcode <= OP_PUSHDATA4)//操作码说明
                 str += ValueString(vch);
             else
                 str += GetOpName(opcode);
