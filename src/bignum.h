@@ -242,7 +242,7 @@ public:
         BN_mpi2bn(&vch2[0], vch2.size(), this);
     }
 
-    std::vector<unsigned char> getvch() const
+    std::vector<unsigned char> getvch() const//返回的是一个向量
     {
         unsigned int nSize = BN_bn2mpi(this, NULL);
         if (nSize < 4)

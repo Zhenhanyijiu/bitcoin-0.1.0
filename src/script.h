@@ -14,7 +14,7 @@ enum
 
 
 
-enum opcodetype
+enum opcodetype//定义操作码类型
 {
     // push value
     OP_0=0,
@@ -150,15 +150,8 @@ enum opcodetype
     OP_INVALIDOPCODE = 0xFFFF,
 };
 
-
-
-
-
-
-
-
-inline const char* GetOpName(opcodetype opcode)
-{
+inline const char* GetOpName(opcodetype opcode)//返回对应操作码类型的
+{											   //字符串名字
     switch (opcode)
     {
     // push value
@@ -295,8 +288,8 @@ inline const char* GetOpName(opcodetype opcode)
 
 
 
-inline string ValueString(const vector<unsigned char>& vch)
-{
+inline string ValueString(const vector<unsigned char>& vch)//如果向量不超过4个字节
+{											//以整数的形式返回，否则输出16进制形式
     if (vch.size() <= 4)
         return strprintf("%d", CBigNum(vch).getint());
     else
@@ -307,8 +300,8 @@ inline string ValueString(const vector<unsigned char>& vch)
 inline string StackString(const vector<vector<unsigned char> >& vStack)
 {
     string str;
-    foreach(const vector<unsigned char>& vch, vStack)
-    {
+    foreach(const vector<unsigned char>& vch, vStack)//遍历栈，输出栈中元素
+    {												//并用空格隔开
         if (!str.empty())
             str += " ";
         str += ValueString(vch);
@@ -318,29 +311,23 @@ inline string StackString(const vector<vector<unsigned char> >& vStack)
 
 
 
-
-
-
-
-
-
 class CScript : public vector<unsigned char>//定义脚本类型，继承于字符向量类型
 {
 protected:
     CScript& push_int64(int64 n)//将一个整数n以字符的形式压入字符向量
     {
-        if (n == -1 || (n >= 1 && n <= 16))
+        if (n == -1 || (n >= 1 && n <= 16))//n=-1,1~16
         {
-            push_back(n + (OP_1 - 1));
+            push_back(n + (OP_1 - 1));//OP_1=0x51=81,将79,81~96压入脚本向量的末尾
         }
         else
         {
             CBigNum bn(n);
-            *this << bn.getvch();
+            *this << bn.getvch();//返回一个大数对应的字符向量并压入脚本向量的末尾
         }
         return (*this);
     }
-
+	//无符号的情况
     CScript& push_uint64(uint64 n)
     {
         if (n == -1 || (n >= 1 && n <= 16))
@@ -356,20 +343,20 @@ protected:
     }
 
 public:
-    CScript() { }
+    CScript() { }//构造一个空的脚本
     CScript(const CScript& b) : vector<unsigned char>(b.begin(), b.end()) { }
     CScript(const_iterator pbegin, const_iterator pend) : vector<unsigned char>(pbegin, pend) { }
 #ifndef _MSC_VER
     CScript(const unsigned char* pbegin, const unsigned char* pend) : vector<unsigned char>(pbegin, pend) { }
 #endif
 
-    CScript& operator+=(const CScript& b)
+    CScript& operator+=(const CScript& b)//将脚本b接连到本身脚本上并返回
     {
         insert(end(), b.begin(), b.end());
         return *this;
     }
 
-    friend CScript operator+(const CScript& a, const CScript& b)
+    friend CScript operator+(const CScript& a, const CScript& b)//两个脚本相加
     {
         CScript ret = a;
         ret += b;
@@ -393,7 +380,7 @@ public:
     explicit CScript(const CBigNum& b) { operator<<(b); }
     explicit CScript(const vector<unsigned char>& b) { operator<<(b); }
 
-
+	//运算符的重载
     CScript& operator<<(char b)           { return (push_int64(b)); }
     CScript& operator<<(short b)          { return (push_int64(b)); }
     CScript& operator<<(int b)            { return (push_int64(b)); }
@@ -440,21 +427,21 @@ public:
         return (*this);
     }
 
-    CScript& operator<<(const vector<unsigned char>& b)
+    CScript& operator<<(const vector<unsigned char>& b)//以向量b构造脚本
     {
-        if (b.size() < OP_PUSHDATA1)
+        if (b.size() < OP_PUSHDATA1)//b的字节长度小于OP_PUSHDATA=76,
         {
-            insert(end(), (unsigned char)b.size());
+            insert(end(), (unsigned char)b.size());//将b的字节大小压入脚本
         }
-        else if (b.size() <= 0xff)
+        else if (b.size() <= 0xff)//字节大小小于0xff,大于等于76,
         {
-            insert(end(), OP_PUSHDATA1);
-            insert(end(), (unsigned char)b.size());
+            insert(end(), OP_PUSHDATA1);//将操作码OP_PUSHDATA1压入脚本中
+            insert(end(), (unsigned char)b.size());//再将b的字节大小压入脚本中
         }
         else
         {
-            insert(end(), OP_PUSHDATA2);
-            unsigned short nSize = b.size();
+            insert(end(), OP_PUSHDATA2);//将操作码OP_PUSHDATA2压入脚本中
+            unsigned short nSize = b.size();//获取b的字节大小
             insert(end(), (unsigned char*)&nSize, (unsigned char*)&nSize + sizeof(nSize));
         }
         insert(end(), b.begin(), b.end());
