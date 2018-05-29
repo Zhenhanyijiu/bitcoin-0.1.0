@@ -327,7 +327,7 @@ inline string StackString(const vector<vector<unsigned char> >& vStack)
 class CScript : public vector<unsigned char>//定义脚本类型，继承于字符向量类型
 {
 protected:
-    CScript& push_int64(int64 n)
+    CScript& push_int64(int64 n)//将一个整数n以字符的形式压入字符向量
     {
         if (n == -1 || (n >= 1 && n <= 16))
         {
@@ -539,7 +539,7 @@ public:
     }
 
 
-    void FindAndDelete(const CScript& b)//参数为脚本类对象b，功能：在本身对象中查找并删除b
+    void FindAndDelete(const CScript& b)//参数为脚本类对象b，功能：在本身对象中查找并删除对象b
     {
         iterator pc = begin();//pc首先指向本身对象的开始处
         opcodetype opcode;//定义一个操作码变量
@@ -570,14 +570,14 @@ public:
         opcodetype opcode;
         vector<unsigned char> vch;
         const_iterator it = begin();
-        while (GetOp(it, opcode, vch))
+        while (GetOp(it, opcode, vch))//返回操作码
         {
             if (!str.empty())
                 str += " ";
-            if (opcode <= OP_PUSHDATA4)//操作码说明
+            if (opcode <= OP_PUSHDATA4)//操作码小于等于OP_PUSHDATA4,78,并将返回的字符向量接连在一起
                 str += ValueString(vch);
             else
-                str += GetOpName(opcode);
+                str += GetOpName(opcode);//接连对应操作码的字符串名字
         }
         return str;
     }
