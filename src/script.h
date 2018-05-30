@@ -442,8 +442,8 @@ public:
         {
             insert(end(), OP_PUSHDATA2);//将操作码OP_PUSHDATA2压入脚本中
             unsigned short nSize = b.size();//获取b的字节大小
-            insert(end(), (unsigned char*)&nSize, (unsigned char*)&nSize + sizeof(nSize));
-        }
+            insert(end(), (unsigned char*)&nSize, (unsigned char*)&nSize + sizeof(nSize));//将整数值压入到脚本中,
+        }																				//按照变量的地址及整数所占的字节数
         insert(end(), b.begin(), b.end());
         return (*this);
     }
