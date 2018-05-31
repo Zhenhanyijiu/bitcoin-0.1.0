@@ -8,7 +8,7 @@ bool CheckSig(vector<unsigned char> vchSig, vector<unsigned char> vchPubKey, CSc
 
 
 
-typedef vector<unsigned char> valtype;
+typedef vector<unsigned char> valtype;//值类型向量类型，可以理解为里面存的是数据
 static const valtype vchFalse(0);
 static const valtype vchZero(0);
 static const valtype vchTrue(1, 1);
