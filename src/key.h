@@ -154,3 +154,7 @@ public:
         return key.Verify(hash, vchSig);
     }
 };
+
+//end
+
+

@@ -18,7 +18,7 @@ static const CBigNum bnFalse(0);
 static const CBigNum bnTrue(1);
 
 
-bool CastToBool(const valtype& vch)
+bool CastToBool(const valtype& vch)//值类型向量表示的大数不为0，返回true，否则返回false
 {
     return (CBigNum(vch) != bnZero);
 }
@@ -27,9 +27,9 @@ void MakeSameSize(valtype& vch1, valtype& vch2)
 {
     // Lengthen the shorter one
     if (vch1.size() < vch2.size())
-        vch1.resize(vch2.size(), 0);
+        vch1.resize(vch2.size(), 0);//重置vch1的大小为vch2的大小，多出的赋值为0
     if (vch2.size() < vch1.size())
-        vch2.resize(vch1.size(), 0);
+        vch2.resize(vch1.size(), 0);//重置vch2的大小为vch1的大小，多出的赋值为0
 }
 
 
@@ -916,7 +916,7 @@ bool Solver(const CScript& scriptPubKey, vector<pair<opcodetype, valtype> >& vSo
     // Templates提供两种模板
     static vector<CScript> vTemplates;//定义一个静态的名字为模板的脚本向量，元素为脚本类型
     if (vTemplates.empty())//如果模板是空的，则执行
-    {					   //两种锁定脚本类型
+    {					   //以下两种锁定脚本类型
         // Standard tx, sender provides pubkey, receiver adds signature
         vTemplates.push_back(CScript() << OP_PUBKEY << OP_CHECKSIG);//将这两个操作码添加到脚本中，生成一个新的脚本
 																	//并将这个脚本添加到模版的末尾
@@ -986,9 +986,11 @@ bool Solver(const CScript& scriptPubKey, vector<pair<opcodetype, valtype> >& vSo
 *********************************************************************/
 
 /********************************************************************
-**传入锁定脚本
-**hash值
-**返回一个脚本scriptSigRet
+***传入锁定脚本
+***hash值
+***返回一个脚本scriptSigRet
+***mapKeys：公钥对应私钥
+***mapPubKeys: 公钥hash值(hash160)对应公钥
 *********************************************************************/
 bool Solver(const CScript& scriptPubKey, uint256 hash, int nHashType, CScript& scriptSigRet)
 {
@@ -1003,37 +1005,37 @@ bool Solver(const CScript& scriptPubKey, uint256 hash, int nHashType, CScript& s
     {			//pair<opcodetype,valtype>& item
         foreach(PAIRTYPE(opcodetype, valtype)& item, vSolution)//#define foreach  BOOST_FOREACH [boost库]
         {				//按照向量vSolution中每一项进行遍历
-            if (item.first == OP_PUBKEY)
+            if (item.first == OP_PUBKEY)//P2PK类型
             {
                 // Sign
-                const valtype& vchPubKey = item.second;
-                if (!mapKeys.count(vchPubKey))
-                    return false;
+                const valtype& vchPubKey = item.second;//取出公钥
+                if (!mapKeys.count(vchPubKey))//map<vector<unsigned char>, CPrivKey> mapKeys;
+                    return false;//查找键值等于公钥vchPubKey的个数，返回0，则没找到
                 if (hash != 0)
                 {
                     vector<unsigned char> vchSig;
-                    if (!CKey::Sign(mapKeys[vchPubKey], hash, vchSig))
-                        return false;
-                    vchSig.push_back((unsigned char)nHashType);
-                    scriptSigRet << vchSig;
+                    if (!CKey::Sign(mapKeys[vchPubKey], hash, vchSig))//直接用类进行调用Sign函数进行签名操作
+                        return false;							//运用公钥对应的私钥
+                    vchSig.push_back((unsigned char)nHashType);//将hash类型压入
+                    scriptSigRet << vchSig;//将所得的签名写到签名脚本中并返回
                 }
             }
-            else if (item.first == OP_PUBKEYHASH)
+            else if (item.first == OP_PUBKEYHASH)//P2PKH类型
             {
-                // Sign and give pubkey
-                map<uint160, valtype>::iterator mi = mapPubKeys.find(uint160(item.second));
-                if (mi == mapPubKeys.end())
+                // Sign and give pubkey//map<uint160, vector<unsigned char> > mapPubKeys;
+                map<uint160, valtype>::iterator mi = mapPubKeys.find(uint160(item.second));//按键值进行查找，
+                if (mi == mapPubKeys.end())//没找到返回end()迭代器							//返回一个迭代器
                     return false;
-                const vector<unsigned char>& vchPubKey = (*mi).second;
-                if (!mapKeys.count(vchPubKey))
+                const vector<unsigned char>& vchPubKey = (*mi).second;//读出公钥值
+                if (!mapKeys.count(vchPubKey))//按照公钥值进行查找
                     return false;
                 if (hash != 0)
                 {
                     vector<unsigned char> vchSig;
-                    if (!CKey::Sign(mapKeys[vchPubKey], hash, vchSig))
+                    if (!CKey::Sign(mapKeys[vchPubKey], hash, vchSig))//签名运算
                         return false;
-                    vchSig.push_back((unsigned char)nHashType);
-                    scriptSigRet << vchSig << vchPubKey;
+                    vchSig.push_back((unsigned char)nHashType);//hash类型压入
+                    scriptSigRet << vchSig << vchPubKey;//将签名及公钥写到签名脚本中，生成解锁脚本
                 }
             }
         }
