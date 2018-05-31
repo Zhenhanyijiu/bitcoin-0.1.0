@@ -289,7 +289,7 @@ inline const char* GetOpName(opcodetype opcode)//返回对应操作码类型的
 
 
 inline string ValueString(const vector<unsigned char>& vch)//如果向量不超过4个字节
-{											//以整数的形式返回，否则输出16进制形式
+{											//以整数的形式返回，否则输出16进制字符串形式
     if (vch.size() <= 4)
         return strprintf("%d", CBigNum(vch).getint());
     else
