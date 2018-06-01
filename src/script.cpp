@@ -991,6 +991,7 @@ bool Solver(const CScript& scriptPubKey, vector<pair<opcodetype, valtype> >& vSo
 ***返回一个脚本scriptSigRet
 ***mapKeys：公钥对应私钥
 ***mapPubKeys: 公钥hash值(hash160)对应公钥
+***功能：根据锁定脚本查找公钥对应的私钥，或者运用对应私钥对消息摘要进行签名，生成解锁脚本
 *********************************************************************/
 bool Solver(const CScript& scriptPubKey, uint256 hash, int nHashType, CScript& scriptSigRet)
 {
@@ -1010,7 +1011,7 @@ bool Solver(const CScript& scriptPubKey, uint256 hash, int nHashType, CScript& s
                 // Sign
                 const valtype& vchPubKey = item.second;//取出公钥
                 if (!mapKeys.count(vchPubKey))//map<vector<unsigned char>, CPrivKey> mapKeys;
-                    return false;//查找键值等于公钥vchPubKey的个数，返回0，则没找到
+                    return false;//查找键值等于公钥vchPubKey的元素个数，返回0，则没找到
                 if (hash != 0)
                 {
                     vector<unsigned char> vchSig;
@@ -1045,19 +1046,19 @@ bool Solver(const CScript& scriptPubKey, uint256 hash, int nHashType, CScript& s
 }
 
 
-bool IsMine(const CScript& scriptPubKey)
-{
+bool IsMine(const CScript& scriptPubKey)//全局的函数，通过传入锁定脚本，进行查找对应的私钥
+{										//若找到则返回true，每个人的私钥与公钥一一对应
     CScript scriptSig;
-    return Solver(scriptPubKey, 0, 0, scriptSig);
+    return Solver(scriptPubKey, 0, 0, scriptSig);//查找锁定脚本中公钥是否在map中存在
 }
 
-
+//提取公钥函数：提取锁定脚本中的公钥并返回
 bool ExtractPubKey(const CScript& scriptPubKey, bool fMineOnly, vector<unsigned char>& vchPubKeyRet)
 {
-    vchPubKeyRet.clear();
+    vchPubKeyRet.clear();//清空
 
     vector<pair<opcodetype, valtype> > vSolution;
-    if (!Solver(scriptPubKey, vSolution))
+    if (!Solver(scriptPubKey, vSolution))//Solver: 返回操作码-数据对pair
         return false;
 
     CRITICAL_BLOCK(cs_mapKeys)
@@ -1065,20 +1066,20 @@ bool ExtractPubKey(const CScript& scriptPubKey, bool fMineOnly, vector<unsigned 
         foreach(PAIRTYPE(opcodetype, valtype)& item, vSolution)
         {
             valtype vchPubKey;
-            if (item.first == OP_PUBKEY)
+            if (item.first == OP_PUBKEY)//P2PK类型
             {
-                vchPubKey = item.second;
+                vchPubKey = item.second;//读取公钥值
             }
-            else if (item.first == OP_PUBKEYHASH)
+            else if (item.first == OP_PUBKEYHASH)//P2PKH类型
             {
                 map<uint160, valtype>::iterator mi = mapPubKeys.find(uint160(item.second));
                 if (mi == mapPubKeys.end())
                     continue;
                 vchPubKey = (*mi).second;
             }
-            if (!fMineOnly || mapKeys.count(vchPubKey))
+            if (!fMineOnly || mapKeys.count(vchPubKey))//在映射向量中存在此公钥
             {
-                vchPubKeyRet = vchPubKey;
+                vchPubKeyRet = vchPubKey;//返回提取的公钥
                 return true;
             }
         }
@@ -1086,7 +1087,7 @@ bool ExtractPubKey(const CScript& scriptPubKey, bool fMineOnly, vector<unsigned 
     return false;
 }
 
-
+//提取公钥hash值并返回
 bool ExtractHash160(const CScript& scriptPubKey, uint160& hash160Ret)
 {
     hash160Ret = 0;
@@ -1097,28 +1098,28 @@ bool ExtractHash160(const CScript& scriptPubKey, uint160& hash160Ret)
 
     foreach(PAIRTYPE(opcodetype, valtype)& item, vSolution)
     {
-        if (item.first == OP_PUBKEYHASH)
+        if (item.first == OP_PUBKEYHASH)//P2PKH类型
         {
-            hash160Ret = uint160(item.second);
+            hash160Ret = uint160(item.second);//读取公钥hash值并返回
             return true;
         }
     }
     return false;
 }
 
-
+//生成解锁脚本与签名相关	//先前的交易[const]	   //当前交易										//解锁脚本
 bool SignSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType, CScript scriptPrereq)
-{
-    assert(nIn < txTo.vin.size());
-    CTxIn& txin = txTo.vin[nIn];
-    assert(txin.prevout.n < txFrom.vout.size());
-    const CTxOut& txout = txFrom.vout[txin.prevout.n];
+{					
+    assert(nIn < txTo.vin.size());//当前交易输入的索引号(从0开始,保证小于元素的个数,很显然)
+    CTxIn& txin = txTo.vin[nIn];//取出指定索引号的当前的交易的交易输入
+    assert(txin.prevout.n < txFrom.vout.size());//交易输入指向的未被花费的交易输出的索引号<先前交易的交易输出向量的大小
+    const CTxOut& txout = txFrom.vout[txin.prevout.n];//取出先前交易的交易输出
 
     // Leave out the signature from the hash, since a signature can't sign itself.
     // The checksig op will also drop the signatures from its hash.
     uint256 hash = SignatureHash(scriptPrereq + txout.scriptPubKey, txTo, nIn, nHashType);
 
-    if (!Solver(txout.scriptPubKey, hash, nHashType, txin.scriptSig))
+    if (!Solver(txout.scriptPubKey, hash, nHashType, txin.scriptSig))//输入锁定脚本，生成并返回对应的解锁脚本
         return false;
 
     txin.scriptSig = scriptPrereq + txin.scriptSig;
