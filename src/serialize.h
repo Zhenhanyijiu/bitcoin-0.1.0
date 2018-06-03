@@ -34,9 +34,9 @@ static const int VERSION = 101;
 enum
 {
     // primary actions
-    SER_NETWORK         = (1 << 0),
-    SER_DISK            = (1 << 1),
-    SER_GETHASH         = (1 << 2),
+    SER_NETWORK         = (1 << 0),//1
+    SER_DISK            = (1 << 1),//10
+    SER_GETHASH         = (1 << 2),//100
 
     // modifiers
     SER_SKIPSIG         = (1 << 16),

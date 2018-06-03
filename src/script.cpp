@@ -808,74 +808,73 @@ bool EvalScript(const CScript& script, const CTransaction& txTo, unsigned int nI
 
 #undef top
 
-
-
-
-
-
-
-
-
-uint256 SignatureHash(CScript scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType)
+uint256 SignatureHash(CScript scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType)//获取hash值
 {
-    if (nIn >= txTo.vin.size())
+    if (nIn >= txTo.vin.size())//当前交易输入的索引号大于等于交易输入向量的大小，超出范围
     {
-        printf("ERROR: SignatureHash() : nIn=%d out of range\n", nIn);
-        return 1;
+        printf("ERROR: SignatureHash() : nIn=%d out of range\n", nIn);//打印错误信息
+        return 1;													//并返回一个整数值1
     }
-    CTransaction txTmp(txTo);
+    CTransaction txTmp(txTo);//拷贝当前交易到txTmp
 
     // In case concatenating two scripts ends up with two codeseparators,
     // or an extra one at the end, this prevents all those possible incompatibilities.
-    scriptCode.FindAndDelete(CScript(OP_CODESEPARATOR));
+    scriptCode.FindAndDelete(CScript(OP_CODESEPARATOR));//查找并删除脚本中OP_CODESEPARATOR操作码
 
     // Blank out other inputs' signatures
     for (int i = 0; i < txTmp.vin.size(); i++)
-        txTmp.vin[i].scriptSig = CScript();
-    txTmp.vin[nIn].scriptSig = scriptCode;
+        txTmp.vin[i].scriptSig = CScript();//为每一个交易输入的解锁脚本成员设置为空
+    txTmp.vin[nIn].scriptSig = scriptCode;//设置第nIn个交易输入的解锁脚本为scriptCode
 
+    //	enum
+    //{
+    //    SIGHASH_ALL = 1,
+    //    SIGHASH_NONE = 2,
+    //    SIGHASH_SINGLE = 3,
+    //    SIGHASH_ANYONECANPAY = 0x80,
+    //};
     // Blank out some of the outputs
-    if ((nHashType & 0x1f) == SIGHASH_NONE)
+    if ((nHashType & 0x1f) == SIGHASH_NONE)//如果是这种类型
     {
         // Wildcard payee
-        txTmp.vout.clear();
+        txTmp.vout.clear();//清空交易输出
 
         // Let the others update at will
-        for (int i = 0; i < txTmp.vin.size(); i++)
-            if (i != nIn)
+        for (int i = 0; i < txTmp.vin.size(); i++)//遍历交易输入
+            if (i != nIn)//将索引号nIn之外的交易输入的nSequence成员设置为0
                 txTmp.vin[i].nSequence = 0;
     }
-    else if ((nHashType & 0x1f) == SIGHASH_SINGLE)
+    else if ((nHashType & 0x1f) == SIGHASH_SINGLE)//如果是这种类型
     {
         // Only lockin the txout payee at same index as txin
-        unsigned int nOut = nIn;
-        if (nOut >= txTmp.vout.size())
+        unsigned int nOut = nIn;//收款人对应的交易输出的索引号和交易输入的索引号相同
+        if (nOut >= txTmp.vout.size())//超出范围
         {
             printf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
             return 1;
         }
-        txTmp.vout.resize(nOut+1);
+        txTmp.vout.resize(nOut+1);//重新设置交易输出的大小
         for (int i = 0; i < nOut; i++)
-            txTmp.vout[i].SetNull();
+            txTmp.vout[i].SetNull();//设置索引号nOut之前的交易输出为空
 
         // Let the others update at will
-        for (int i = 0; i < txTmp.vin.size(); i++)
+        for (int i = 0; i < txTmp.vin.size(); i++)//遍历交易输入
             if (i != nIn)
-                txTmp.vin[i].nSequence = 0;
+                txTmp.vin[i].nSequence = 0;//将索引号nIn之外的交易输入的nSequence成员设置为0
     }
 
     // Blank out other inputs completely, not recommended for open transactions
-    if (nHashType & SIGHASH_ANYONECANPAY)
+    if (nHashType & SIGHASH_ANYONECANPAY)//如果是这种情况
     {
-        txTmp.vin[0] = txTmp.vin[nIn];
-        txTmp.vin.resize(1);
+        txTmp.vin[0] = txTmp.vin[nIn];//将索引号为nIn的交易输入存到索引号0处
+        txTmp.vin.resize(1);//重置交易输入向量的大小为1，即删除其他元素
     }
 
     // Serialize and hash
     CDataStream ss(SER_GETHASH);
-    ss.reserve(10000);
+    ss.reserve(10000);//为ss预分配10000个元素的存储空间
     ss << txTmp << nHashType;
-    return Hash(ss.begin(), ss.end());
+    return Hash(ss.begin(), ss.end());//返回一个hash值
 }
 
 
@@ -900,14 +899,6 @@ bool CheckSig(vector<unsigned char> vchSig, vector<unsigned char> vchPubKey, CSc
 
     return false;
 }
-
-
-
-
-
-
-
-
 
 
 //通过传入公钥脚本即锁定脚本，最终生成并返回一个解决方法向量
@@ -1107,7 +1098,7 @@ bool ExtractHash160(const CScript& scriptPubKey, uint160& hash160Ret)
     return false;
 }
 
-//生成解锁脚本与签名相关	//先前的交易[const]	   //当前交易										//解锁脚本
+//生成解锁脚本与签名相关	//先前的交易[const]	   //当前交易		//当前交易输入的索引号			//与解锁脚本相关
 bool SignSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType, CScript scriptPrereq)
 {					
     assert(nIn < txTo.vin.size());//当前交易输入的索引号(从0开始,保证小于元素的个数,很显然)
@@ -1117,7 +1108,7 @@ bool SignSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int 
 
     // Leave out the signature from the hash, since a signature can't sign itself.
     // The checksig op will also drop the signatures from its hash.
-    uint256 hash = SignatureHash(scriptPrereq + txout.scriptPubKey, txTo, nIn, nHashType);
+    uint256 hash = SignatureHash(scriptPrereq + txout.scriptPubKey, txTo, nIn, nHashType);//返回一个hash值,将要被签名
 
     if (!Solver(txout.scriptPubKey, hash, nHashType, txin.scriptSig))//输入锁定脚本，生成并返回对应的解锁脚本
         return false;
@@ -1125,9 +1116,9 @@ bool SignSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int 
     txin.scriptSig = scriptPrereq + txin.scriptSig;
 
     // Test solution
-    if (scriptPrereq.empty())
+    if (scriptPrereq.empty()) //参数scriptPrereq,默认为空,将解锁脚本和锁定脚本拼接在一起，执行解析脚本函数EvalScript()
         if (!EvalScript(txin.scriptSig + CScript(OP_CODESEPARATOR) + txout.scriptPubKey, txTo, nIn))
-            return false;
+            return false;	//OP_CODESEPARATOR: 标记已进行签名验证的数据
 
     return true;
 }
@@ -1146,3 +1137,5 @@ bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsig
 
     return EvalScript(txin.scriptSig + CScript(OP_CODESEPARATOR) + txout.scriptPubKey, txTo, nIn, nHashType);
 }
+
+//end
