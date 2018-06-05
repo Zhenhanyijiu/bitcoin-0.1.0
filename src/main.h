@@ -77,12 +77,12 @@ bool SendMoney(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew);
 
 
 
-class CDiskTxPos
-{
+class CDiskTxPos//表示交易Tx在本地存储位置。
+{				//交易是存储在文件中的
 public:
-    unsigned int nFile;
-    unsigned int nBlockPos;
-    unsigned int nTxPos;
+    unsigned int nFile;//表示交易Tx所在的文件
+    unsigned int nBlockPos;//表示交易Tx在区块block中的位置
+    unsigned int nTxPos;//表示在文件中的偏移位置
 
     CDiskTxPos()
     {
@@ -265,8 +265,8 @@ public:
         printf("%s\n", ToString().c_str());
     }
 
-    bool IsMine() const;
-    int64 GetDebit() const;
+    bool IsMine() const;//main.cpp
+    int64 GetDebit() const;//main.cpp
 };
 
 
@@ -318,7 +318,7 @@ public:
 
     bool IsMine() const //判断交易输出是否属于自己，即自己是否拥有该交易输出的比特币，只要是对应的scriptPubKey，那么就返回true
     {
-        return ::IsMine(scriptPubKey);
+        return ::IsMine(scriptPubKey);//查看script.cpp
     }
 
     int64 GetCredit() const//获取交易输出的比特币数量
@@ -328,13 +328,13 @@ public:
         return 0;
     }
 
-    friend bool operator==(const CTxOut& a, const CTxOut& b)
+    friend bool operator==(const CTxOut& a, const CTxOut& b)//重载==，两个交易输出相等
     {
         return (a.nValue       == b.nValue &&
                 a.scriptPubKey == b.scriptPubKey);
     }
 
-    friend bool operator!=(const CTxOut& a, const CTxOut& b)
+    friend bool operator!=(const CTxOut& a, const CTxOut& b)//重载!=
     {
         return !(a == b);
     }
@@ -359,13 +359,13 @@ public:
 // The basic transaction that is broadcasted on the network and contained in
 // blocks.  A transaction can contain multiple inputs and outputs.
 //
-class CTransaction
+class CTransaction//交易类结构
 {
 public:
-    int nVersion;
+    int nVersion;     //版本号
     vector<CTxIn> vin;//交易输入向量
     vector<CTxOut> vout;//交易输出向量
-    int nLockTime;
+    int nLockTime;    //此版本没起到作用
 
 
     CTransaction()//构造函数，一个空的交易
@@ -373,7 +373,7 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
+    IMPLEMENT_SERIALIZE//实现序列化
     (
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
@@ -404,7 +404,7 @@ public:
     {
         if (nLockTime == 0 || nLockTime < nBestHeight)
             return true;
-        foreach(const CTxIn& txin, vin)
+        foreach(const CTxIn& txin, vin)//遍历交易输入向量
             if (!txin.IsFinal())
                 return false;
         return true;
@@ -439,23 +439,23 @@ public:
         return fNewer;
     }
 
-    bool IsCoinBase() const
+    bool IsCoinBase() const//判断此交易是否为创币交易
     {
-        return (vin.size() == 1 && vin[0].prevout.IsNull());
-    }
+        return (vin.size() == 1 && vin[0].prevout.IsNull());//创币交易只有一个交易输入，而它的指向
+    }														//为空，即不指向任何先前的交易输出
 
-    bool CheckTransaction() const
+    bool CheckTransaction() const//检查交易
     {
         // Basic checks that don't depend on any context
-        if (vin.empty() || vout.empty())
+        if (vin.empty() || vout.empty())//如果交易输入向量或者交易输出向量有一个为空，出错！
             return error("CTransaction::CheckTransaction() : vin or vout empty");
 
         // Check for negative values
-        foreach(const CTxOut& txout, vout)
+        foreach(const CTxOut& txout, vout)//检查交易输出的值是否为负值
             if (txout.nValue < 0)
                 return error("CTransaction::CheckTransaction() : txout.nValue negative");
 
-        if (IsCoinBase())
+        if (IsCoinBase())//如果是创币交易
         {
             if (vin[0].scriptSig.size() < 2 || vin[0].scriptSig.size() > 100)
                 return error("CTransaction::CheckTransaction() : coinbase script size");
@@ -486,10 +486,10 @@ public:
         return nDebit;
     }
 
-    int64 GetCredit() const
+    int64 GetCredit() const//返回属于自己的交易输出的总的货币数量
     {
         int64 nCredit = 0;
-        foreach(const CTxOut& txout, vout)
+        foreach(const CTxOut& txout, vout)//遍历所有的交易输出
             nCredit += txout.GetCredit();
         return nCredit;
     }
@@ -600,11 +600,11 @@ public:
 //
 // A transaction with a merkle branch linking it to the block chain
 //
-class CMerkleTx : public CTransaction
+class CMerkleTx : public CTransaction//默克尔交易，继承自交易类
 {
 public:
-    uint256 hashBlock;
-    vector<uint256> vMerkleBranch;
+    uint256 hashBlock;//此交易所在区块bloc的hash值
+    vector<uint256> vMerkleBranch;//默克尔树路径，证明该交易在区块中
     int nIndex;
 
     // memory only
@@ -621,7 +621,7 @@ public:
         Init();
     }
 
-    void Init()
+    void Init()//初始化默克尔交易
     {
         hashBlock = 0;
         nIndex = -1;
@@ -662,7 +662,7 @@ public:
 // about.  It includes any unrecorded transactions needed to link it back
 // to the block chain.
 //
-class CWalletTx : public CMerkleTx
+class CWalletTx : public CMerkleTx//钱包交易继承自默克尔交易，
 {
 public:
     vector<CMerkleTx> vtxPrev;
@@ -740,12 +740,12 @@ public:
 // locations of transactions that spend its outputs.  vSpent is really only
 // used as a flag, but having the location is very helpful for debugging.
 //
-class CTxIndex
-{
+class CTxIndex//和存储相关的类
+{			//在存储中，使用交易的hash为键CTxIndex为值进行存储
 public:
-    CDiskTxPos pos;
-    vector<CDiskTxPos> vSpent;
-
+    CDiskTxPos pos;//本地中的存储位置
+    vector<CDiskTxPos> vSpent;//与当前TX的vout相对应，记录
+							//一个交易输出是否被花费(UTXO)
     CTxIndex()
     {
         SetNull();

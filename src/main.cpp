@@ -228,23 +228,24 @@ void EraseOrphanTx(uint256 hash)
 // CTransaction
 //
 
-bool CTxIn::IsMine() const
+bool CTxIn::IsMine() const//交易输入类CTxIn成员函数IsMine()
 {
     CRITICAL_BLOCK(cs_mapWallet)
     {
+		//查找映射表中键值等于prevout.hash的元素，找到先前的交易
         map<uint256, CWalletTx>::iterator mi = mapWallet.find(prevout.hash);
         if (mi != mapWallet.end())
         {
-            const CWalletTx& prev = (*mi).second;
-            if (prevout.n < prev.vout.size())
-                if (prev.vout[prevout.n].IsMine())
+            const CWalletTx& prev = (*mi).second;//取出对应的交易
+            if (prevout.n < prev.vout.size())//保证索引号不越界，要小于先前交易输出向量的大小
+                if (prev.vout[prevout.n].IsMine())//取出索引号为n的交易输出，执行IsMine()
                     return true;
         }
     }
     return false;
 }
 
-int64 CTxIn::GetDebit() const
+int64 CTxIn::GetDebit() const//返回先前交易中交易输出中的货币大小
 {
     CRITICAL_BLOCK(cs_mapWallet)
     {

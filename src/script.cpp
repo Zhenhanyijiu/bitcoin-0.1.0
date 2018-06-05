@@ -49,7 +49,7 @@ bool EvalScript(const CScript& script, const CTransaction& txTo, unsigned int nI
     CScript::const_iterator pc = script.begin();
     CScript::const_iterator pend = script.end();
     CScript::const_iterator pbegincodehash = script.begin();
-    vector<bool> vfExec;//这是一个暂时的记录，栈中执行if判断结果的地方
+    vector<bool> vfExec;//这是一个暂时的记录，栈中执行if存放判断结果的地方
     vector<valtype> stack;//栈就是这一个，而valtype就是一个字符向量类型
     vector<valtype> altstack;
     if (pvStackRet)
@@ -888,14 +888,14 @@ bool CheckSig(vector<unsigned char> vchSig, vector<unsigned char> vchPubKey, CSc
     // Hash type is one byte tacked on to the end of the signature
     if (vchSig.empty())
         return false;
-    if (nHashType == 0)
+    if (nHashType == 0)//如果传入的nHashType=0,则取出签名中的最后一个字节
         nHashType = vchSig.back();
-    else if (nHashType != vchSig.back())
+    else if (nHashType != vchSig.back())//保证hash类型与签名向量中最后一个字节是一致的
         return false;
-    vchSig.pop_back();
+    vchSig.pop_back();//删除栈顶元素
 
     if (key.Verify(SignatureHash(scriptCode, txTo, nIn, nHashType), vchSig))
-        return true;
+        return true;//调用验证函数，对签名进行验证
 
     return false;
 }
@@ -1132,10 +1132,12 @@ bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsig
         return false;
     const CTxOut& txout = txFrom.vout[txin.prevout.n];//取出前一个交易的第n个交易输出（从0开始）
 
-    if (txin.prevout.hash != txFrom.GetHash())
+    if (txin.prevout.hash != txFrom.GetHash())//保证交易输入指向的未被花费的交易输出所在交易的hash值相等
         return false;
-
+				//运行脚本，将解锁脚本和公钥脚本拼接
     return EvalScript(txin.scriptSig + CScript(OP_CODESEPARATOR) + txout.scriptPubKey, txTo, nIn, nHashType);
-}
+			
+
+}				
 
 //end
