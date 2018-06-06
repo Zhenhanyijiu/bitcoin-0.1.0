@@ -753,8 +753,8 @@ public:
 
     CTxIndex(const CDiskTxPos& posIn, unsigned int nOutputs)
     {
-        pos = posIn;
-        vSpent.resize(nOutputs);
+        pos = posIn;//传入位置信息
+        vSpent.resize(nOutputs);//重设向量的大小
     }
 
     IMPLEMENT_SERIALIZE
@@ -810,19 +810,19 @@ public:
 class CBlock
 {
 public:
-    // header
-    int nVersion;
-    uint256 hashPrevBlock;
-    uint256 hashMerkleRoot;
-    unsigned int nTime;
-    unsigned int nBits;
-    unsigned int nNonce;
+    // header		//区块头
+    int nVersion;//版本号，4bytes
+    uint256 hashPrevBlock;//父区块hash值,32bytes
+    uint256 hashMerkleRoot;//Merkle根,32bytes
+    unsigned int nTime; //时间戳,4bytes
+    unsigned int nBits; //难度目标,4bytes
+    unsigned int nNonce;//Nonce,4bytes，工作量证明
 
-    // network and disk
-    vector<CTransaction> vtx;
+    // network and disk//
+    vector<CTransaction> vtx;//记录在区块中的交易向量
 
     // memory only
-    mutable vector<uint256> vMerkleTree;
+    mutable vector<uint256> vMerkleTree;//默克尔树
 
 
     CBlock()
@@ -863,14 +863,15 @@ public:
     {
         return (nBits == 0);
     }
-
+	//#define BEGIN(a)            ((char*)&(a))
+	//#define END(a)              ((char*)&((&(a))[1]))
     uint256 GetHash() const
     {
-        return Hash(BEGIN(nVersion), END(nNonce));
+        return Hash(BEGIN(nVersion), END(nNonce));//返回区块头的hash值
     }
 
 
-    uint256 BuildMerkleTree() const
+    uint256 BuildMerkleTree() const//创建默克尔树
     {
         vMerkleTree.clear();
         foreach(const CTransaction& tx, vtx)
