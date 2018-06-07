@@ -825,12 +825,12 @@ public:
     mutable vector<uint256> vMerkleTree;//默克尔树
 
 
-    CBlock()
+    CBlock()//构造一个空区块
     {
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
+    IMPLEMENT_SERIALIZE//实现序列化
     (
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
@@ -859,7 +859,7 @@ public:
         vMerkleTree.clear();
     }
 
-    bool IsNull() const
+    bool IsNull() const//如果难度目标值为0，那么区块为空
     {
         return (nBits == 0);
     }
@@ -873,11 +873,11 @@ public:
 
     uint256 BuildMerkleTree() const//创建默克尔树
     {
-        vMerkleTree.clear();
-        foreach(const CTransaction& tx, vtx)
-            vMerkleTree.push_back(tx.GetHash());
+        vMerkleTree.clear();//清空
+        foreach(const CTransaction& tx, vtx)//对交易进行遍历
+            vMerkleTree.push_back(tx.GetHash());//生成的交易hash存到默克尔树中
         int j = 0;
-        for (int nSize = vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)
+        for (int nSize = vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)//生成默克尔树
         {
             for (int i = 0; i < nSize; i += 2)
             {
@@ -887,38 +887,38 @@ public:
             }
             j += nSize;
         }
-        return (vMerkleTree.empty() ? 0 : vMerkleTree.back());
+        return (vMerkleTree.empty() ? 0 : vMerkleTree.back());//并返回默克尔树根
     }
 
-    vector<uint256> GetMerkleBranch(int nIndex) const
-    {
+    vector<uint256> GetMerkleBranch(int nIndex) const//获取默克尔树分支，同时创建默克尔分支
+    {									//生成证明某个交易在区块中的默克尔分支，并返回
         if (vMerkleTree.empty())
             BuildMerkleTree();
         vector<uint256> vMerkleBranch;
         int j = 0;
         for (int nSize = vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)
         {
-            int i = min(nIndex^1, nSize-1);
-            vMerkleBranch.push_back(vMerkleTree[j+i]);
-            nIndex >>= 1;
+            int i = min(nIndex^1, nSize-1);//索引号为偶数，取右兄弟；索引号为奇数取左兄弟
+            vMerkleBranch.push_back(vMerkleTree[j+i]);//将对应的hash值存到默克尔分支中
+            nIndex >>= 1;//索引号减小一半
             j += nSize;
         }
         return vMerkleBranch;
     }
-
+	//检查交易是否在区块中，通过返回的hash值与默克尔树根进行比较
     static uint256 CheckMerkleBranch(uint256 hash, const vector<uint256>& vMerkleBranch, int nIndex)
     {
         if (nIndex == -1)
             return 0;
         foreach(const uint256& otherside, vMerkleBranch)
         {
-            if (nIndex & 1)
+            if (nIndex & 1) //如果索引号是奇数,将hash值接连到左边
                 hash = Hash(BEGIN(otherside), END(otherside), BEGIN(hash), END(hash));
-            else
+            else			//如果索引号是偶数,将hash值接连到右边
                 hash = Hash(BEGIN(hash), END(hash), BEGIN(otherside), END(otherside));
             nIndex >>= 1;
         }
-        return hash;
+        return hash;//返回hash值
     }
 
 
