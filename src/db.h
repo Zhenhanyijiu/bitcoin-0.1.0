@@ -23,7 +23,7 @@ extern void DBFlush(bool fShutdown);
 
 
 
-class CDB
+class CDB//自定义一个数据库类，依赖库为Berkeley DB
 {
 protected:
     Db* pdb;

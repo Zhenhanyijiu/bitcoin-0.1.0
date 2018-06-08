@@ -34,13 +34,13 @@ static const int VERSION = 101;
 enum
 {
     // primary actions
-    SER_NETWORK         = (1 << 0),//1
-    SER_DISK            = (1 << 1),//10
-    SER_GETHASH         = (1 << 2),//100
+    SER_NETWORK         = (1 << 0),//1    与网络相关的标志信息
+    SER_DISK            = (1 << 1),//10   与磁盘存储相关的标志信息
+    SER_GETHASH         = (1 << 2),//100  与获取hash值相关的标志
 
     // modifiers
-    SER_SKIPSIG         = (1 << 16),
-    SER_BLOCKHEADERONLY = (1 << 17),
+    SER_SKIPSIG         = (1 << 16),//  跳过签名
+    SER_BLOCKHEADERONLY = (1 << 17),//  仅区块头
 };
 
 #define IMPLEMENT_SERIALIZE(statements)    \
