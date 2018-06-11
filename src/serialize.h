@@ -15,8 +15,8 @@ typedef unsigned long long  uint64;
 #if defined(_MSC_VER) && _MSC_VER < 1300
 #define for  if (false) ; else for
 #endif
-class CScript;
-class CDataStream;
+class CScript;//脚本类型
+class CDataStream;//数据流类型
 class CAutoFile;
 
 static const int VERSION = 101;
@@ -90,7 +90,7 @@ enum
 //
 #define WRITEDATA(s, obj)   s.write((char*)&(obj), sizeof(obj))
 #define READDATA(s, obj)    s.read((char*)&(obj), sizeof(obj))
-
+//获取序列化大小，返回对象的字节个数
 inline unsigned int GetSerializeSize(char a,           int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(signed char a,    int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(unsigned char a,  int, int=0) { return sizeof(a); }
@@ -105,6 +105,7 @@ inline unsigned int GetSerializeSize(uint64 a,         int, int=0) { return size
 inline unsigned int GetSerializeSize(float a,          int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(double a,         int, int=0) { return sizeof(a); }
 
+//函数模板，数据流Stream按字节写操作(序列化)
 template<typename Stream> inline void Serialize(Stream& s, char a,           int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, signed char a,    int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, unsigned char a,  int, int=0) { WRITEDATA(s, a); }
@@ -119,6 +120,7 @@ template<typename Stream> inline void Serialize(Stream& s, uint64 a,         int
 template<typename Stream> inline void Serialize(Stream& s, float a,          int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, double a,         int, int=0) { WRITEDATA(s, a); }
 
+//函数模板，数据流Stream按字节读操作(反序列化)
 template<typename Stream> inline void Unserialize(Stream& s, char& a,           int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, signed char& a,    int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, unsigned char& a,  int, int=0) { READDATA(s, a); }
@@ -133,6 +135,7 @@ template<typename Stream> inline void Unserialize(Stream& s, uint64& a,         
 template<typename Stream> inline void Unserialize(Stream& s, float& a,          int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, double& a,         int, int=0) { READDATA(s, a); }
 
+//bool 类型的序列化操作
 inline unsigned int GetSerializeSize(bool a, int, int=0)                          { return sizeof(char); }
 template<typename Stream> inline void Serialize(Stream& s, bool a, int, int=0)    { char f=a; WRITEDATA(s, f); }
 template<typename Stream> inline void Unserialize(Stream& s, bool& a, int, int=0) { char f; READDATA(s, f); a=f; }
@@ -158,58 +161,58 @@ inline unsigned int GetSizeOfCompactSize(uint64 nSize)
 }
 
 template<typename Stream>
-void WriteCompactSize(Stream& os, uint64 nSize)
+void WriteCompactSize(Stream& os, uint64 nSize)//将uint64类型的数据小型化，写到数据流里
 {
-    if (nSize < UCHAR_MAX-2)
+    if (nSize < UCHAR_MAX-2)//<253
     {
         unsigned char chSize = nSize;
         WRITEDATA(os, chSize);
     }
-    else if (nSize <= USHRT_MAX)
+    else if (nSize <= USHRT_MAX)//小于等于无符号short型最大值
     {
-        unsigned char chSize = UCHAR_MAX-2;
+        unsigned char chSize = UCHAR_MAX-2;//253
         unsigned short xSize = nSize;
-        WRITEDATA(os, chSize);
+        WRITEDATA(os, chSize);//首先将253写进去
         WRITEDATA(os, xSize);
     }
-    else if (nSize <= UINT_MAX)
+    else if (nSize <= UINT_MAX)//小于等于无符号int型最大值
     {
-        unsigned char chSize = UCHAR_MAX-1;
+        unsigned char chSize = UCHAR_MAX-1;//254
         unsigned int xSize = nSize;
-        WRITEDATA(os, chSize);
+        WRITEDATA(os, chSize);//首先将254写进去
         WRITEDATA(os, xSize);
     }
-    else
+    else						//大于无符号int型最大值
     {
-        unsigned char chSize = UCHAR_MAX;
-        WRITEDATA(os, chSize);
+        unsigned char chSize = UCHAR_MAX;//255
+        WRITEDATA(os, chSize);//首先将255写进去
         WRITEDATA(os, nSize);
     }
     return;
 }
 
 template<typename Stream>
-uint64 ReadCompactSize(Stream& is)
+uint64 ReadCompactSize(Stream& is)//从数据流中读取小型化数据
 {
     unsigned char chSize;
     READDATA(is, chSize);
-    if (chSize < UCHAR_MAX-2)
+    if (chSize < UCHAR_MAX-2)//<253
     {
         return chSize;
     }
-    else if (chSize == UCHAR_MAX-2)
+    else if (chSize == UCHAR_MAX-2)//==253
     {
         unsigned short nSize;
         READDATA(is, nSize);
         return nSize;
     }
-    else if (chSize == UCHAR_MAX-1)
+    else if (chSize == UCHAR_MAX-1)//==254
     {
         unsigned int nSize;
         READDATA(is, nSize);
         return nSize;
     }
-    else
+    else						//255
     {
         uint64 nSize;
         READDATA(is, nSize);
@@ -227,8 +230,8 @@ uint64 ReadCompactSize(Stream& is)
 class CFlatData
 {
 protected:
-    char* pbegin;
-    char* pend;
+    char* pbegin;//开始地址
+    char* pend;  //结束地址
 public:
     CFlatData(void* pbeginIn, void* pendIn) : pbegin((char*)pbeginIn), pend((char*)pendIn) { }
     char* begin() { return pbegin; }
@@ -241,16 +244,16 @@ public:
         return pend - pbegin;
     }
 
-    template<typename Stream>
+    template<typename Stream>//序列化
     void Serialize(Stream& s, int, int=0) const
     {
-        s.write(pbegin, pend - pbegin);
+        s.write(pbegin, pend - pbegin);//写
     }
 
-    template<typename Stream>
+    template<typename Stream>//反序列化
     void Unserialize(Stream& s, int, int=0)
     {
-        s.read(pbegin, pend - pbegin);
+        s.read(pbegin, pend - pbegin);//读
     }
 };
 
@@ -259,7 +262,7 @@ public:
 //
 // string stored as a fixed length field
 //
-template<std::size_t LEN>
+template<std::size_t LEN>//固定长度的字符串，类模板，LEN
 class CFixedFieldString
 {
 protected:
@@ -269,7 +272,7 @@ public:
     explicit CFixedFieldString(const string& str) : pcstr(&str), pstr(NULL) { }
     explicit CFixedFieldString(string& str) : pcstr(&str), pstr(&str) { }
 
-    unsigned int GetSerializeSize(int, int=0) const
+    unsigned int GetSerializeSize(int, int=0) const//获取字节大小
     {
         return LEN;
     }
@@ -278,8 +281,8 @@ public:
     void Serialize(Stream& s, int, int=0) const
     {
         char pszBuf[LEN];
-        strncpy(pszBuf, pcstr->c_str(), LEN);
-        s.write(pszBuf, LEN);
+        strncpy(pszBuf, pcstr->c_str(), LEN);//返回正规C字符串指针
+        s.write(pszBuf, LEN);//写到数据流
     }
 
     template<typename Stream>
@@ -643,7 +646,7 @@ inline unsigned int SerReadWrite(Stream& s, T& obj, int nType, int nVersion, CSe
     return 0;
 }
 
-struct ser_streamplaceholder
+struct ser_streamplaceholder//结构体类型
 {
     int nType;
     int nVersion;
@@ -661,7 +664,7 @@ struct ser_streamplaceholder
 // Allocator that clears its contents before deletion
 //
 template<typename T>
-struct secure_allocator : public std::allocator<T>
+struct secure_allocator : public std::allocator<T>//分配器模板
 {
     // MSVC8 default copy constructor is broken
     typedef std::allocator<T> base;
